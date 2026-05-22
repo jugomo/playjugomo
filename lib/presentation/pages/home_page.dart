@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/radio_station.dart';
 import '../cubits/player_cubit.dart';
 import '../cubits/stations_cubit.dart';
+import '../cubits/theme_cubit.dart';
 import '../widgets/player_bar.dart';
 import '../widgets/station_tile.dart';
+import 'settings_page.dart';
 
-/// Main screen with two tabs: all stations and favourites.
-/// Shows playback errors via a [SnackBar].
+/// Main screen with two tabs: All Stations and Favourites.
+/// Handles real-time search (400 ms debounce), theme toggling, and navigation
+/// to [SettingsPage]. Reloads the station list when returning from Settings
+/// so any restored station reappears immediately.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -21,6 +27,7 @@ class _HomePageState extends State<HomePage>
   late final TabController _tabController;
   final _searchController = TextEditingController();
   bool _showSearch = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -33,11 +40,22 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  void _onSearch(String query) {
-    context.read<StationsCubit>().loadStations(query: query.trim());
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      context.read<StationsCubit>().loadStations(query: query.trim());
+    });
+  }
+
+  void _closeSearch() {
+    _debounce?.cancel();
+    setState(() => _showSearch = false);
+    _searchController.clear();
+    context.read<StationsCubit>().loadStations();
   }
 
   @override
@@ -71,9 +89,27 @@ class _HomePageState extends State<HomePage>
                     hintText: 'Search stations...',
                     border: InputBorder.none,
                   ),
-                  onSubmitted: _onSearch,
+                  onChanged: _onSearchChanged,
                 )
-              : const Text('Play jugomo 📻'),
+              : BlocBuilder<StationsCubit, StationsState>(
+                  builder: (context, state) {
+                    final count =
+                        state is StationsLoaded ? state.stations.length : null;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Play jugomo 📻',
+                            style: TextStyle(fontSize: 18)),
+                        if (count != null)
+                          Text(
+                            '$count stations',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
+                    );
+                  },
+                ),
           bottom: TabBar(
             controller: _tabController,
             tabs: const [
@@ -82,14 +118,30 @@ class _HomePageState extends State<HomePage>
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                final cubit = context.read<StationsCubit>();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsPage()),
+                ).then((_) => cubit.loadStations());
+              },
+            ),
+            BlocBuilder<ThemeCubit, ThemeMode>(
+              builder: (context, themeMode) => IconButton(
+                icon: Icon(
+                  themeMode == ThemeMode.dark
+                      ? Icons.light_mode
+                      : Icons.dark_mode,
+                ),
+                onPressed: () => context.read<ThemeCubit>().toggle(),
+              ),
+            ),
             if (_showSearch)
               IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () {
-                  setState(() => _showSearch = false);
-                  _searchController.clear();
-                  context.read<StationsCubit>().loadStations();
-                },
+                onPressed: _closeSearch,
               )
             else
               IconButton(
@@ -106,7 +158,25 @@ class _HomePageState extends State<HomePage>
                 children: [_StationsTab(), _FavoritesTab()],
               ),
             ),
-            const PlayerBar(),
+            BlocBuilder<PlayerCubit, RadioPlayerState>(
+              buildWhen: (prev, curr) =>
+                  (prev.currentStation == null) !=
+                  (curr.currentStation == null),
+              builder: (context, state) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder: (child, animation) => SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(
+                      CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+                  child: FadeTransition(opacity: animation, child: child),
+                ),
+                child: state.currentStation != null
+                    ? const PlayerBar(key: ValueKey('bar'))
+                    : const SizedBox.shrink(key: ValueKey('none')),
+              ),
+            ),
           ],
         ),
       ),
@@ -134,7 +204,12 @@ class _StationsTab extends StatelessWidget {
               message: 'No stations found. Try a different search.',
             );
           }
-          return _StationList(stations: state.stations);
+          return _StationList(
+            stations: state.stations,
+            onRefresh: () => context.read<StationsCubit>().loadStations(),
+            isSearching: state.isSearching,
+            permanentIds: state.permanentIds,
+          );
         }
         return const SizedBox.shrink();
       },
@@ -158,7 +233,11 @@ class _FavoritesTab extends StatelessWidget {
               icon: Icons.favorite_border,
             );
           }
-          return _StationList(stations: state.favorites);
+          return _StationList(
+            stations: state.favorites,
+            onRefresh: () =>
+                context.read<StationsCubit>().loadStations(),
+          );
         }
         return const SizedBox.shrink();
       },
@@ -166,17 +245,65 @@ class _FavoritesTab extends StatelessWidget {
   }
 }
 
+/// Scrollable list of stations with pull-to-refresh and swipe-to-ignore.
+/// Swipe left (endToStart) to permanently hide a station via [StationsCubit.ignoreStation].
+/// Shows a Save button on each item that is a search result not yet in the permanent list.
 class _StationList extends StatelessWidget {
   final List<RadioStation> stations;
+  final Future<void> Function() onRefresh;
+  final bool isSearching;
+  final Set<String> permanentIds;
 
-  const _StationList({required this.stations});
+  const _StationList({
+    required this.stations,
+    required this.onRefresh,
+    this.isSearching = false,
+    this.permanentIds = const {},
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      itemCount: stations.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) => StationTile(station: stations[index]),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        itemCount: stations.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final station = stations[index];
+          final canSave =
+              isSearching && !permanentIds.contains(station.id);
+          return Dismissible(
+            key: ValueKey(station.id),
+            direction: DismissDirection.endToStart,
+            background: const SizedBox.shrink(),
+            secondaryBackground: Container(
+              color: Colors.red.shade700,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 24),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.block, color: Colors.white),
+                  SizedBox(height: 4),
+                  Text('Ignore',
+                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                ],
+              ),
+            ),
+            onDismissed: (_) =>
+                context.read<StationsCubit>().ignoreStation(station),
+            child: StationTile(
+              station: station,
+              index: index,
+              showSaveButton: canSave,
+              onSave: canSave
+                  ? () => context.read<StationsCubit>().pinStation(station)
+                  : null,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -239,9 +366,10 @@ class _EmptyView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.grey),
             ),
           ],
         ),

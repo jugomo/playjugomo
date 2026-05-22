@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-/// Core domain entity representing a radio station.
+/// Immutable core entity representing a radio station.
+/// Shared across all layers; the data layer extends it via [RadioStationModel].
 class RadioStation extends Equatable {
   final String id;
   final String name;

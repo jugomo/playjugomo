@@ -1,4 +1,4 @@
-# playjugomo
+# PlayJugomo
 
 ![PlayJugomo](PlayJugomoEN.png)
 
@@ -6,33 +6,53 @@ Another Stream Radio player by jugomo — a Flutter app for discovering and list
 
 ## Features
 
-- Browse 100+ live radio stations fetched from the [radio-browser.info](https://www.radio-browser.info) free API
+### Playback
+- Browse live radio stations fetched from the [radio-browser.info](https://www.radio-browser.info) free API
 - Tap any station to start streaming instantly
-- Play/pause and volume controls in a persistent bottom player bar
-- Search stations by name
-- Mark stations as favorites with a heart icon
-- Favorites tab for quick access — persisted across sessions
+- Persistent bottom player bar with play/pause controls and collapsible volume slider
+- Animated entry of the player bar when a station is selected for the first time
+- Animated equalizer bars on the station avatar while playing
+
+### Discovery & Search
+- Real-time search with 400 ms debounce — results update as you type
+- Station count shown in the app bar after loading
+- Save any search result permanently to the top of your All Stations list with one tap
+- Pull-to-refresh to reload the station list at any time
+
+### Organisation
+- Mark stations as favorites with the heart icon — persisted across sessions
+- Favorites tab for quick access
+- Row numbers in retro VT323 font for a classic radio-dial feel
+- Country and genre tags displayed as compact chips on each row
+- Swipe left on any station to ignore it — it will never appear again
+- Settings page listing all ignored stations with the option to restore any of them
+
+### UI
+- Material 3 design with a purple seed color
+- Light / dark theme toggle in the app bar
+- Tags rendered as compact pill chips instead of plain text
 
 ## Architecture
 
-This project follows **Clean Architecture** principles, separated into three layers:
+Clean Architecture in three layers, with dependency flow `presentation → domain ← data`.
 
 ```
 lib/
 ├── core/
 │   ├── constants/          # API base URL
-│   └── di/                 # Dependency injection (GetIt)
+│   └── di/                 # Dependency injection (GetIt) — service_locator.dart
 ├── domain/
-│   ├── entities/           # RadioStation entity
-│   ├── repositories/       # Abstract repository interface
-│   └── usecases/           # GetStationsUseCase, ToggleFavoriteUseCase
+│   ├── entities/           # RadioStation, IgnoredStation
+│   ├── repositories/       # Abstract RadioRepository interface
+│   └── usecases/           # GetStations, ToggleFavorite, Ignore/Unignore,
+│                           #   Pin/GetPinned, GetIgnored
 ├── data/
-│   ├── models/             # JSON deserialization (RadioStationModel)
-│   ├── datasources/        # Remote (Dio) + Local (SharedPreferences)
+│   ├── models/             # RadioStationModel (JSON → entity)
+│   ├── datasources/        # RadioRemoteDataSource (Dio), RadioLocalDataSource (SharedPreferences)
 │   └── repositories/       # RadioRepositoryImpl
 └── presentation/
-    ├── cubits/             # StationsCubit, PlayerCubit (flutter_bloc)
-    ├── pages/              # HomePage (tabs: All Stations / Favorites)
+    ├── cubits/             # StationsCubit, PlayerCubit, ThemeCubit, SettingsCubit
+    ├── pages/              # HomePage (All Stations / Favorites tabs), SettingsPage
     └── widgets/            # StationTile, PlayerBar
 ```
 
@@ -44,12 +64,25 @@ lib/
 | `get_it` | Dependency injection |
 | `audioplayers` | Audio streaming |
 | `dio` | HTTP client |
-| `shared_preferences` | Local favorites persistence |
-| `equatable` | Value equality for entities/states |
+| `shared_preferences` | Local persistence (favorites, ignored, pinned stations) |
+| `equatable` | Value equality for entities and states |
+| `google_fonts` | VT323 retro font for station row numbers |
+
+## Local Persistence
+
+Three independent lists are stored in `SharedPreferences`:
+
+| Key | Content | Purpose |
+|---|---|---|
+| `favorite_station_ids` | List of station IDs | Favorite stations |
+| `ignored_stations` | List of `{id, name}` JSON objects | Stations permanently hidden from the list |
+| `pinned_stations` | List of full station JSON objects | Stations manually saved from search results |
+
+Pinned stations are prepended to the All Stations list on every load. If the same station is returned by the API, the API version takes precedence and no duplicate appears.
 
 ## API
 
-Stations are fetched from [radio-browser.info](https://de1.api.radio-browser.info) — a free, community-driven radio station database with no authentication required.
+Stations are fetched from [radio-browser.info](https://de1.api.radio-browser.info) — a free, community-driven radio station database with no authentication required. The endpoint is hardcoded to the `de1` mirror.
 
 ## Getting Started
 
@@ -80,4 +113,11 @@ flutter run -d <device-id>
 ```bash
 flutter build apk
 # Output: build/app/outputs/flutter-apk/app-release.apk
+```
+
+### Useful commands
+
+```bash
+flutter analyze          # Static analysis (flutter_lints)
+flutter test             # Run all tests
 ```

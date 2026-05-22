@@ -1,6 +1,7 @@
 import '../../domain/entities/radio_station.dart';
 
-/// Extends [RadioStation] with JSON deserialisation from the API response.
+/// Extends [RadioStation] with JSON deserialisation from the radio-browser.info API response.
+/// There is no separate mapper — the model IS the entity plus a factory constructor.
 class RadioStationModel extends RadioStation {
   const RadioStationModel({
     required super.id,
@@ -23,6 +24,7 @@ class RadioStationModel extends RadioStation {
     );
   }
 
+  /// Converts to a plain [RadioStation] entity with an explicit [isFavorite] flag.
   RadioStation toEntity({bool isFavorite = false}) {
     return RadioStation(
       id: id,

@@ -7,15 +7,20 @@ import '../../data/datasources/radio_local_datasource.dart';
 import '../../data/datasources/radio_remote_datasource.dart';
 import '../../data/repositories/radio_repository_impl.dart';
 import '../../domain/repositories/radio_repository.dart';
+import '../../domain/usecases/get_ignored_stations_usecase.dart';
+import '../../domain/usecases/get_pinned_stations_usecase.dart';
 import '../../domain/usecases/get_stations_usecase.dart';
+import '../../domain/usecases/ignore_station_usecase.dart';
+import '../../domain/usecases/pin_station_usecase.dart';
 import '../../domain/usecases/toggle_favorite_usecase.dart';
+import '../../domain/usecases/unignore_station_usecase.dart';
 import '../constants/api_constants.dart';
 
-/// Global service locator instance (GetIt).
+/// Global GetIt instance — imported wherever a dependency is needed.
 final sl = GetIt.instance;
 
 /// Registers all app dependencies.
-/// Must be called in [main] before [runApp].
+/// Must be called before [runApp] because [SharedPreferences] requires async init.
 Future<void> setupServiceLocator() async {
   final prefs = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(prefs);
@@ -46,4 +51,9 @@ Future<void> setupServiceLocator() async {
 
   sl.registerLazySingleton(() => GetStationsUseCase(sl()));
   sl.registerLazySingleton(() => ToggleFavoriteUseCase(sl()));
+  sl.registerLazySingleton(() => IgnoreStationUseCase(sl()));
+  sl.registerLazySingleton(() => UnignoreStationUseCase(sl()));
+  sl.registerLazySingleton(() => GetIgnoredStationsUseCase(sl()));
+  sl.registerLazySingleton(() => PinStationUseCase(sl()));
+  sl.registerLazySingleton(() => GetPinnedStationsUseCase(sl()));
 }

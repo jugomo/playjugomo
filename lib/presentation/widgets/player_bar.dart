@@ -4,9 +4,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubits/player_cubit.dart';
 
 /// Persistent playback bar anchored to the bottom of the screen.
-/// Hidden when no station has been selected yet.
-class PlayerBar extends StatelessWidget {
+/// The volume row can be collapsed with the chevron button to save space.
+/// Hidden (by the parent) when no station has been selected yet.
+class PlayerBar extends StatefulWidget {
   const PlayerBar({super.key});
+
+  @override
+  State<PlayerBar> createState() => _PlayerBarState();
+}
+
+class _PlayerBarState extends State<PlayerBar> {
+  bool _volumeExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +47,8 @@ class PlayerBar extends StatelessWidget {
                   backgroundColor: colorScheme.surfaceContainerHigh,
                 ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
                   children: [
                     _favicon(station.favicon, context),
@@ -70,39 +79,62 @@ class PlayerBar extends StatelessWidget {
                     ),
                     IconButton(
                       icon: Icon(
-                        state.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                        _volumeExpanded
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_up,
+                        size: 20,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () =>
+                          setState(() => _volumeExpanded = !_volumeExpanded),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        state.isPlaying
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_filled,
                         size: 40,
                         color: colorScheme.primary,
                       ),
-                      onPressed: state.isLoading ? null : cubit.togglePlayPause,
+                      onPressed:
+                          state.isLoading ? null : cubit.togglePlayPause,
                     ),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.volume_down, size: 20),
-                      onPressed: cubit.volumeDown,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    Expanded(
-                      child: Slider(
-                        value: state.volume,
-                        min: 0.0,
-                        max: 1.0,
-                        onChanged: cubit.setVolume,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.volume_up, size: 20),
-                      onPressed: cubit.volumeUp,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _volumeExpanded
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.volume_down, size: 20),
+                              onPressed: cubit.volumeDown,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            Expanded(
+                              child: Slider(
+                                value: state.volume,
+                                min: 0.0,
+                                max: 1.0,
+                                onChanged: cubit.setVolume,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.volume_up, size: 20),
+                              onPressed: cubit.volumeUp,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
@@ -122,7 +154,8 @@ class PlayerBar extends StatelessWidget {
                 width: 40,
                 height: 40,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.radio, size: 22),
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.radio, size: 22),
               ),
             )
           : const Icon(Icons.radio, size: 22),

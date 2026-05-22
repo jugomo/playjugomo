@@ -1,6 +1,5 @@
 part of 'stations_cubit.dart';
 
-/// Possible states for [StationsCubit].
 abstract class StationsState extends Equatable {
   const StationsState();
 
@@ -14,15 +13,26 @@ class StationsInitial extends StationsState {}
 /// Stations are being fetched from the API.
 class StationsLoading extends StationsState {}
 
-/// Stations loaded successfully. Contains the full list and the favourites.
+/// Stations loaded successfully.
+///
+/// [isSearching] is true while a search query is active.
+/// [permanentIds] is the union of pinned and base station IDs; used by the UI
+/// to decide whether to show the Save button on a search result.
 class StationsLoaded extends StationsState {
   final List<RadioStation> stations;
   final List<RadioStation> favorites;
+  final bool isSearching;
+  final Set<String> permanentIds;
 
-  const StationsLoaded({required this.stations, required this.favorites});
+  const StationsLoaded({
+    required this.stations,
+    required this.favorites,
+    this.isSearching = false,
+    this.permanentIds = const {},
+  });
 
   @override
-  List<Object?> get props => [stations, favorites];
+  List<Object?> get props => [stations, favorites, isSearching, permanentIds];
 }
 
 /// An error occurred while loading stations.

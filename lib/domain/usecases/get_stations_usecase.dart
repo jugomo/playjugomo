@@ -1,7 +1,7 @@
 import '../entities/radio_station.dart';
 import '../repositories/radio_repository.dart';
 
-/// Use case for fetching the station list, with optional search support.
+/// Fetches the station list from the repository, with optional search support.
 class GetStationsUseCase {
   final RadioRepository repository;
 
