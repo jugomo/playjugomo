@@ -90,6 +90,17 @@ Pinned stations are prepended to the All Stations list on every load. If the sam
 
 Stations are fetched from [radio-browser.info](https://de1.api.radio-browser.info) — a free, community-driven radio station database with no authentication required. The endpoint is hardcoded to the `de1` mirror.
 
+## Development Time
+
+Built across two sessions over two days, estimated from commit history:
+
+| Session | Date | Duration | Work done |
+|---|---|---|---|
+| 1 | 21 May 2026 · evening | ~2.5 h | Project setup, full clean architecture, audio handler, base UI |
+| 2 | 22 May 2026 · morning | ~2.5 h | App icon, UI polish, pin/ignore feature, Settings page, About page, release |
+
+**Total: ~5–6 hours of active coding** across ~1,500 net lines of business logic (excluding generated code and assets).
+
 ## Getting Started
 
 > **Tested on:** Android (emulator and physical device). iOS and other platforms have not been verified.
