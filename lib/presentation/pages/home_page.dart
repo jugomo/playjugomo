@@ -16,7 +16,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final _searchController = TextEditingController();
   bool _showSearch = false;
@@ -42,7 +43,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return BlocListener<PlayerCubit, RadioPlayerState>(
-      listenWhen: (prev, curr) => curr.errorMessage != null && curr.errorMessage != prev.errorMessage,
+      listenWhen: (prev, curr) =>
+          curr.errorMessage != null && curr.errorMessage != prev.errorMessage,
       listener: (context, state) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -60,57 +62,54 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         );
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: _showSearch
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search stations...',
-                  border: InputBorder.none,
-                ),
-                onSubmitted: _onSearch,
+        appBar: AppBar(
+          title: _showSearch
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Search stations...',
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: _onSearch,
+                )
+              : const Text('Play jugomo 📻'),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(icon: Icon(Icons.radio), text: 'All Stations'),
+              Tab(icon: Icon(Icons.favorite), text: 'Favorites'),
+            ],
+          ),
+          actions: [
+            if (_showSearch)
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() => _showSearch = false);
+                  _searchController.clear();
+                  context.read<StationsCubit>().loadStations();
+                },
               )
-            : const Text('Radio Stations'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.radio), text: 'All Stations'),
-            Tab(icon: Icon(Icons.favorite), text: 'Favorites'),
+            else
+              IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: () => setState(() => _showSearch = true),
+              ),
           ],
         ),
-        actions: [
-          if (_showSearch)
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                setState(() => _showSearch = false);
-                _searchController.clear();
-                context.read<StationsCubit>().loadStations();
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () => setState(() => _showSearch = true),
+        body: Column(
+          children: [
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [_StationsTab(), _FavoritesTab()],
+              ),
             ),
-        ],
+            const PlayerBar(),
+          ],
+        ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _StationsTab(),
-                _FavoritesTab(),
-              ],
-            ),
-          ),
-          const PlayerBar(),
-        ],
-      ),
-    ),
     );
   }
 }
@@ -131,7 +130,9 @@ class _StationsTab extends StatelessWidget {
         }
         if (state is StationsLoaded) {
           if (state.stations.isEmpty) {
-            return const _EmptyView(message: 'No stations found. Try a different search.');
+            return const _EmptyView(
+              message: 'No stations found. Try a different search.',
+            );
           }
           return _StationList(stations: state.stations);
         }
@@ -152,7 +153,8 @@ class _FavoritesTab extends StatelessWidget {
         if (state is StationsLoaded) {
           if (state.favorites.isEmpty) {
             return const _EmptyView(
-              message: 'No favorites yet.\nTap the heart icon on a station to save it.',
+              message:
+                  'No favorites yet.\nTap the heart icon on a station to save it.',
               icon: Icons.favorite_border,
             );
           }
@@ -237,7 +239,9 @@ class _EmptyView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
             ),
           ],
         ),

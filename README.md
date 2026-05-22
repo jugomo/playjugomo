@@ -1,5 +1,7 @@
 # playjugomo
 
+![PlayJugomo](PlayJugomoEN.png)
+
 Another Stream Radio player by jugomo — a Flutter app for discovering and listening to radio stations around the world.
 
 ## Features
