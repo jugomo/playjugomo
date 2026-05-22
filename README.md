@@ -4,6 +4,12 @@
 
 Another Stream Radio player by jugomo — a Flutter app for discovering and listening to radio stations around the world.
 
+## Demo
+
+The following short video walks through the main features of the app — browsing stations, searching, toggling favorites, swiping to ignore, and the persistent player bar:
+
+[![PlayJugomo demo](https://img.youtube.com/vi/NDe_tstHwco/0.jpg)](https://youtube.com/shorts/NDe_tstHwco)
+
 ## Features
 
 ### Playback

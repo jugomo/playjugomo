@@ -9,6 +9,7 @@ import '../cubits/stations_cubit.dart';
 import '../cubits/theme_cubit.dart';
 import '../widgets/player_bar.dart';
 import '../widgets/station_tile.dart';
+import 'about_page.dart';
 import 'settings_page.dart';
 
 /// Main screen with two tabs: All Stations and Favourites.
@@ -49,6 +50,33 @@ class _HomePageState extends State<HomePage>
     _debounce = Timer(const Duration(milliseconds: 400), () {
       context.read<StationsCubit>().loadStations(query: query.trim());
     });
+  }
+
+  Future<void> _openAbout(BuildContext context, {Widget page = const AboutPage()}) {
+    return Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => page,
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (_, animation, secondaryAnimation, child) {
+          final slide = Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeInOut));
+          final slideOut = Tween<Offset>(
+            begin: Offset.zero,
+            end: const Offset(1, 0),
+          ).animate(CurvedAnimation(
+              parent: secondaryAnimation, curve: Curves.easeInOut));
+          return SlideTransition(
+            position: slideOut,
+            child: SlideTransition(position: slide, child: child),
+          );
+        },
+      ),
+    );
   }
 
   void _closeSearch() {
@@ -95,18 +123,9 @@ class _HomePageState extends State<HomePage>
                   builder: (context, state) {
                     final count =
                         state is StationsLoaded ? state.stations.length : null;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Play jugomo 📻',
-                            style: TextStyle(fontSize: 18)),
-                        if (count != null)
-                          Text(
-                            '$count stations',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
+                    return _TitleButton(
+                      count: count,
+                      onTap: () => _openAbout(context),
                     );
                   },
                 ),
@@ -122,10 +141,8 @@ class _HomePageState extends State<HomePage>
               icon: const Icon(Icons.settings),
               onPressed: () {
                 final cubit = context.read<StationsCubit>();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsPage()),
-                ).then((_) => cubit.loadStations());
+                _openAbout(context, page: const SettingsPage())
+                    .then((_) => cubit.loadStations());
               },
             ),
             BlocBuilder<ThemeCubit, ThemeMode>(
@@ -176,6 +193,76 @@ class _HomePageState extends State<HomePage>
                     ? const PlayerBar(key: ValueKey('bar'))
                     : const SizedBox.shrink(key: ValueKey('none')),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TitleButton extends StatefulWidget {
+  final int? count;
+  final VoidCallback onTap;
+
+  const _TitleButton({required this.count, required this.onTap});
+
+  @override
+  State<_TitleButton> createState() => _TitleButtonState();
+}
+
+class _TitleButtonState extends State<_TitleButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 80),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: _pressed
+              ? color.withValues(alpha: 0.05)
+              : Colors.transparent,
+          boxShadow: _pressed
+              ? []
+              : [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.06),
+                    offset: const Offset(0, 1),
+                    blurRadius: 2,
+                    spreadRadius: 0,
+                  ),
+                ],
+          border: Border.all(
+            color: color.withValues(alpha: _pressed ? 0.0 : 0.06),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.more_vert, size: 16, color: color.withValues(alpha: 0.5)),
+            const SizedBox(width: 4),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Play jugomo 📻',
+                    style: TextStyle(fontSize: 18)),
+                if (widget.count != null)
+                  Text(
+                    '${widget.count} stations',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
             ),
           ],
         ),
