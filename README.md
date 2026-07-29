@@ -10,6 +10,15 @@ The following short video walks through the main features of the app — browsin
 
 [![PlayJugomo demo](https://img.youtube.com/vi/NDe_tstHwco/0.jpg)](https://youtube.com/shorts/NDe_tstHwco)
 
+## Ownership & contributing
+
+This project was created by [@jugomo](https://github.com/jugomo) and is
+licensed under the [MIT License](LICENSE). Anyone is welcome to use this
+software at their own risk, copy or fork it as long as the original
+author is credited, and contribute back, whether that's opening a pull
+request or simply suggesting improvements via an issue. No warranty is
+provided.
+
 ## Features
 
 ### Playback
